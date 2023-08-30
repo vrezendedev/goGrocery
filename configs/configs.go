@@ -19,7 +19,7 @@ type (
 func init() {
 	cfg = new(Config)
 	cfg.DB.Host = "localhost"
-	cfg.DB.Port = "8000"
+	cfg.DB.Port = "5432"
 	cfg.DB.User = "user"
 	cfg.DB.Password = "password123"
 	cfg.DB.Database = "groceryDB"

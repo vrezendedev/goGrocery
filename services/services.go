@@ -16,7 +16,7 @@ func GetActiveGroceryList(owner string) (gl GroceryList, err error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return gl, fiber.NewError(fiber.StatusNotFound,
-				fmt.Sprintf("The requested grocery list wasn't found %s", err.Error()),
+				"The requested active grocery list wasn't found, the user needs to create a new one.",
 			)
 		} else {
 			return gl, fiber.NewError(fiber.StatusInternalServerError,
@@ -64,6 +64,26 @@ func NewGroceryList(owner string) (gl GroceryList, err error) {
 }
 
 func FinishActiveGroceryList(listID int64) (err error) {
+	gl, err := dal.SelectSingleGroceryList(listID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fiber.NewError(fiber.StatusNotFound,
+				fmt.Sprintf("The target list wasn't found wasn't found %s", err.Error()),
+			)
+		} else {
+			return fiber.NewError(fiber.StatusInternalServerError,
+				fmt.Sprintf("An error has occurred while searching for the target list%s", err.Error()),
+			)
+		}
+	}
+
+	if !gl.Active {
+		return fiber.NewError(fiber.StatusForbidden,
+			"User already finished the grocery list",
+		)
+	}
+
 	rows, err := dal.UpdateGroceryList(listID)
 
 	if err != nil {
@@ -82,6 +102,20 @@ func FinishActiveGroceryList(listID int64) (err error) {
 }
 
 func DeleteGroceryList(listID int64) (err error) {
+	gl, err := dal.SelectSingleGroceryList(listID)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError,
+			fmt.Sprintf("An error has occurred while searching for the grocery list  %s", err.Error()),
+		)
+	}
+
+	if err == nil && gl.DeletedAt.Valid {
+		return fiber.NewError(fiber.StatusForbidden,
+			"User already deleted the grocery list",
+		)
+	}
+
 	rows, err := dal.DeleteGroceryList(listID)
 
 	if err != nil {
@@ -104,13 +138,13 @@ func GetGroceryItems(listID int64) (gis []GroceryItem, err error) {
 
 	if err != nil {
 		return gis, fiber.NewError(fiber.StatusInternalServerError,
-			fmt.Sprintf("An error has occurred while searching for the active the list %s", err.Error()),
+			fmt.Sprintf("An error has occurred while searching for the active list with the requested ID %s", err.Error()),
 		)
 	}
 
-	if !lst.Active || !lst.DeletedAt.Valid {
+	if !lst.Active || lst.DeletedAt.Valid {
 		return gis, fiber.NewError(fiber.StatusForbidden,
-			"Target list is not active or is deleted.",
+			"Target list is not active or was deleted",
 		)
 	}
 
@@ -170,6 +204,40 @@ func UpdateGroceryItem(groceryItemID int64, listID int64, name string, quantity 
 }
 
 func UpdateCheckGroceryItem(groceryItemID int64, listID int64) (gi GroceryItem, err error) {
+	lst, err := dal.SelectSingleGroceryList(listID)
+
+	if err != nil {
+		return gi, fiber.NewError(fiber.StatusInternalServerError,
+			fmt.Sprintf("An error has occurred while searching for the grocery item %s", err.Error()),
+		)
+	}
+
+	if !lst.Active || lst.DeletedAt.Valid {
+		return gi, fiber.NewError(fiber.StatusForbidden,
+			"Target list is not active or was deleted",
+		)
+	}
+
+	pgi, err := dal.SelectGroceryItem(groceryItemID, listID)
+
+	if err == nil && pgi.Checked && pgi.DeletedAt.Valid {
+		return pgi, fiber.NewError(fiber.StatusForbidden,
+			"User already have checked the target item or it has been deleted",
+		)
+	}
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return gi, fiber.NewError(fiber.StatusNotFound,
+				fmt.Sprintf("The target grocery item wasn't found %s", err.Error()),
+			)
+		} else {
+			return gi, fiber.NewError(fiber.StatusInternalServerError,
+				fmt.Sprintf("An error has occurred while updating the check state of the grocery item %s", err.Error()),
+			)
+		}
+	}
+
 	gi, err = dal.UpdateCheckGroceryItem(groceryItemID, listID)
 
 	if err != nil {
@@ -188,6 +256,20 @@ func UpdateCheckGroceryItem(groceryItemID int64, listID int64) (gi GroceryItem, 
 }
 
 func DeleteGroceryItem(groceryItemID int64, listID int64) (err error) {
+	gi, err := dal.SelectGroceryItem(groceryItemID, listID)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError,
+			fmt.Sprintf("An error has occurred while searching for the grocery item %s", err.Error()),
+		)
+	}
+
+	if err == nil && gi.DeletedAt.Valid {
+		return fiber.NewError(fiber.StatusForbidden,
+			"User already deleted the grocery item",
+		)
+	}
+
 	rows, err := dal.DeleteGroceryItem(groceryItemID, listID)
 
 	if err != nil {

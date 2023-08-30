@@ -30,9 +30,9 @@ func SelectGroceryList(owner string) (gl GroceryList, err error) {
 
 	defer conn.Close()
 
-	sql := `SELECT * FROM grocery_list WHERE owner = $1 and active = true and deleted_at = null`
+	sql := `SELECT * FROM grocery_list WHERE owner = $1 and active is true and deleted_at is null`
 
-	err = conn.QueryRow(sql, owner).Scan(&gl.ID, &gl.Owner, &gl.Active, &gl.CreatedAt, &gl.UpdatedAt)
+	err = conn.QueryRow(sql, owner).Scan(&gl.ID, &gl.Owner, &gl.Active, &gl.CreatedAt, &gl.UpdatedAt, &gl.DeletedAt)
 
 	return
 }
@@ -48,7 +48,7 @@ func SelectSingleGroceryList(listID int64) (gl GroceryList, err error) {
 
 	sql := `SELECT * FROM grocery_list WHERE id = $1`
 
-	err = conn.QueryRow(sql, listID).Scan(&gl.ID, &gl.Owner, &gl.Active, &gl.CreatedAt, &gl.UpdatedAt)
+	err = conn.QueryRow(sql, listID).Scan(&gl.ID, &gl.Owner, &gl.Active, &gl.CreatedAt, &gl.UpdatedAt, &gl.DeletedAt)
 
 	return
 }
@@ -62,9 +62,9 @@ func SelectGroceryItem(groceryItemID int64, groceryListID int64) (gi GroceryItem
 
 	defer conn.Close()
 
-	sql := `SELECT * FROM grocery_item WHERE id = $1 and grocery_list_id = $2 and deleted_at = null`
+	sql := `SELECT * FROM grocery_item WHERE id = $1 and grocery_list_id = $2`
 
-	err = conn.QueryRow(sql, groceryItemID, groceryListID).Scan(&gi.ID, &gi.GroceryListID, &gi.Name, &gi.Quantity, &gi.Checked, &gi.CreatedAt, &gi.UpdatedAt)
+	err = conn.QueryRow(sql, groceryItemID, groceryListID).Scan(&gi.ID, &gi.GroceryListID, &gi.Name, &gi.Quantity, &gi.Checked, &gi.CreatedAt, &gi.UpdatedAt, &gi.DeletedAt)
 
 	return
 }
@@ -78,7 +78,7 @@ func SelectGroceryItems(groceryListID int64) (gis []GroceryItem, err error) {
 
 	defer conn.Close()
 
-	sql := `SELECT * FROM grocery_item WHERE grocery_list_id = $1 and deleted_at = null`
+	sql := `SELECT * FROM grocery_item WHERE grocery_list_id = $1 and deleted_at is null ORDER BY id ASC`
 
 	rows, err := conn.Query(sql, groceryListID)
 
@@ -89,7 +89,7 @@ func SelectGroceryItems(groceryListID int64) (gis []GroceryItem, err error) {
 	for rows.Next() {
 		var gi GroceryItem
 
-		err = rows.Scan(&gi.ID, &gi.GroceryListID, &gi.Name, &gi.Quantity, &gi.Checked, &gi.CreatedAt, &gi.UpdatedAt)
+		err = rows.Scan(&gi.ID, &gi.GroceryListID, &gi.Name, &gi.Quantity, &gi.Checked, &gi.CreatedAt, &gi.UpdatedAt, &gi.DeletedAt)
 
 		if err != nil {
 			continue

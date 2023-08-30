@@ -26,8 +26,8 @@ type (
 	}
 
 	EntitiesIDS struct {
-		ChildID  int64 `json:"childID" validate:"required"`
-		ParentID int64 `json:"parentID" validate:"required"`
+		ChildID  int64 `json:"child_id" validate:"required"`
+		ParentID int64 `json:"parent_id" validate:"required"`
 	}
 
 	ValidateErrors struct {
